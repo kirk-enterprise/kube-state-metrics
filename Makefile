@@ -8,6 +8,9 @@ REGISTRY = gcr.io/google_containers
 TAG = $(shell git describe --abbrev=0)
 PKGS = $(shell go list ./... | grep -v /vendor/)
 
+gofmtcheck:
+	@go fmt $(PKGS) | grep ".*\.go"; if [ "$$?" = "0" ]; then exit 1; fi     
+
 deps:
 	go get github.com/tools/godep
 
@@ -21,7 +24,7 @@ container: build
 	docker build -t ${REGISTRY}/kube-state-metrics:$(TAG) .
 
 push: container
-	gcloud docker push ${REGISTRY}/kube-state-metrics:$(TAG)
+	gcloud docker -- push ${REGISTRY}/kube-state-metrics:$(TAG)
 
 clean:
 	rm -f kube-state-metrics

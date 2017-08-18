@@ -42,6 +42,12 @@ var (
 		[]string{"namespace", "pod", "host_ip", "pod_ip", "node", "created_by_kind", "created_by_name"}, nil,
 	)
 
+	descPodStartTime = prometheus.NewDesc(
+		"kube_pod_start_time",
+		"Start time in unix timestamp for a pod.",
+		[]string{"namespace", "pod"}, nil,
+	)
+
 	descPodOwner = prometheus.NewDesc(
 		"kube_pod_owner",
 		"Information about the Pod's owner.",
@@ -167,6 +173,7 @@ type podCollector struct {
 // Describe implements the prometheus.Collector interface.
 func (pc *podCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- descPodInfo
+	ch <- descPodStartTime
 	ch <- descPodOwner
 	ch <- descPodLabels
 	ch <- descPodStatusPhase
@@ -257,6 +264,11 @@ func (pc *podCollector) collectPod(ch chan<- prometheus.Metric, p v1.Pod) {
 			createdByName = createdBy.Name
 		}
 	}
+
+	if p.Status.StartTime != nil {
+		addGauge(descPodStartTime, float64((*(p.Status.StartTime)).Unix()))
+	}
+
 	addGauge(descPodInfo, 1, p.Status.HostIP, p.Status.PodIP, nodeName, createdByKind, createdByName)
 
 	owners := p.GetOwnerReferences()
@@ -270,7 +282,14 @@ func (pc *podCollector) collectPod(ch chan<- prometheus.Metric, p v1.Pod) {
 
 	labelKeys, labelValues := kubeLabelsToPrometheusLabels(p.Labels)
 	addGauge(podLabelsDesc(labelKeys), 1, labelValues...)
-	addGauge(descPodStatusPhase, 1, string(p.Status.Phase))
+
+	if p := p.Status.Phase; p != "" {
+		addGauge(descPodStatusPhase, boolFloat64(p == v1.PodPending), string(v1.PodPending))
+		addGauge(descPodStatusPhase, boolFloat64(p == v1.PodRunning), string(v1.PodRunning))
+		addGauge(descPodStatusPhase, boolFloat64(p == v1.PodSucceeded), string(v1.PodSucceeded))
+		addGauge(descPodStatusPhase, boolFloat64(p == v1.PodFailed), string(v1.PodFailed))
+		addGauge(descPodStatusPhase, boolFloat64(p == v1.PodUnknown), string(v1.PodUnknown))
+	}
 
 	for _, c := range p.Status.Conditions {
 		switch c.Type {

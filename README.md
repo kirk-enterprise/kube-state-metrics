@@ -1,5 +1,7 @@
 # Overview
 
+[![Build Status](https://travis-ci.org/kubernetes/kube-state-metrics.svg?branch=master)](https://travis-ci.org/kubernetes/kube-state-metrics)  [![Go Report Card](https://goreportcard.com/badge/github.com/kubernetes/kube-state-metrics)](https://goreportcard.com/report/github.com/kubernetes/kube-state-metrics)
+
 kube-state-metrics is a simple service that listens to the Kubernetes API
 server and generates metrics about the state of the objects. (See examples in
 the Metrics section below.) It is not focused on the health of the individual
@@ -14,7 +16,14 @@ either by Prometheus itself or by a scraper that is compatible with scraping
 a Prometheus client endpoint. You can also open `/metrics` in a browser to see
 the raw metrics.
 
-*Requires Kubernetes 1.2+*
+## Kubernetes Version
+
+kube-state-metrics uses [`client-go`](https://github.com/kubernetes/client-go) to talk with
+Kubernetes clusters. The supported Kubernetes cluster version is determined by `client-go`.
+The compatibility matrix for client-go and Kubernetes cluster can be found 
+[here](https://github.com/kubernetes/client-go#compatibility-matrix). 
+All additional compatibility is only best effort, or happens to still/already be supported.
+Currently, `client-go` is in version `v4.0.0-beta.0`.
 
 ## Container Image
 
@@ -29,6 +38,20 @@ additional metrics!
 > WARNING: THESE METRIC/TAG NAMES ARE UNSTABLE AND MAY CHANGE IN A FUTURE RELEASE.
 
 See the [`Documentation`](Documentation) directory for documentation of the exposed metrics.
+
+## Resource recommendation
+
+Resource usage changes with the size of the cluster. As a general rule, you should allocate
+
+* 200MiB memory
+* 0.1 cores
+
+For clusters of more than 100 nodes, allocate at least
+
+* 2MiB memory per node
+* 0.001 cores per node
+
+These numbers are based on [scalability tests](https://github.com/kubernetes/kube-state-metrics/issues/124#issuecomment-318394185) at 30 pods per node.
 
 ## kube-state-metrics vs. Heapster
 
@@ -61,11 +84,10 @@ from those monitoring systems.
 
 # Setup
 
-Install this project to your `$GOPATH` in the following manner:
+Install this project to your `$GOPATH` using `go get`:
 
 ```
-git clone https://github.com/kubernetes/kube-state-metrics \
-    $GOPATH/src/k8s.io/kube-state-metrics
+go get k8s.io/kube-state-metrics
 ```
 
 ## Building the Docker container

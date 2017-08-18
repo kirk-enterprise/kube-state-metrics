@@ -24,9 +24,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/robfig/cron"
 	"golang.org/x/net/context"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/api"
-	"k8s.io/client-go/pkg/api/unversioned"
 	v2batch "k8s.io/client-go/pkg/apis/batch/v2alpha1"
 	"k8s.io/client-go/tools/cache"
 )
@@ -117,7 +117,7 @@ func (cjc *cronJobCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func getNextScheduledTime(schedule string, lastScheduleTime *unversioned.Time, createdTime unversioned.Time) (time.Time, error) {
+func getNextScheduledTime(schedule string, lastScheduleTime *metav1.Time, createdTime metav1.Time) (time.Time, error) {
 	sched, err := cron.ParseStandard(schedule)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("Failed to parse cron job schedule '%s': %s", schedule, err)
@@ -151,7 +151,9 @@ func (jc *cronJobCollector) collectCronJob(ch chan<- prometheus.Metric, j v2batc
 
 	addGauge(descCronJobInfo, 1, j.Spec.Schedule, string(j.Spec.ConcurrencyPolicy))
 	addGauge(descCronJobStatusActive, float64(len(j.Status.Active)))
-	addGauge(descCronJobSpecSuspend, boolFloat64(*j.Spec.Suspend))
+	if j.Spec.Suspend != nil {
+		addGauge(descCronJobSpecSuspend, boolFloat64(*j.Spec.Suspend))
+	}
 
 	if j.Status.LastScheduleTime != nil {
 		addGauge(descCronJobStatusLastScheduleTime, float64(j.Status.LastScheduleTime.Unix()))
